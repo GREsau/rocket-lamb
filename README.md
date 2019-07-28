@@ -1,6 +1,6 @@
 # 🚀 Rocket Lamb 🐑
 
-![Crates.io](https://img.shields.io/crates/v/rocket_lamb)
+![Travis (.org)](https://img.shields.io/travis/GREsau/rocket-lamb?logo=travis) ![Crates.io](https://img.shields.io/crates/v/rocket_lamb)
 
 A crate to allow running a [Rocket](https://rocket.rs/) webserver as an AWS Lambda Function with API Gateway, built on the [AWS Lambda Rust Runtime](https://github.com/awslabs/aws-lambda-rust-runtime).
 
