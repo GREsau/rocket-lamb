@@ -4,7 +4,7 @@ use rocket::{get, routes};
 use rocket_lamb::{lambda, RocketHandler};
 
 #[get("/")]
-pub fn hello() -> &'static str {
+fn hello() -> &'static str {
     "Hello world!"
 }
 

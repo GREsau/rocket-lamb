@@ -13,7 +13,7 @@ use std::fs::File;
 fn not_found() {}
 
 #[post("/upper/<path>?<query>", data = "<body>")]
-pub fn upper(path: String, query: String, body: String) -> String {
+fn upper(path: String, query: String, body: String) -> String {
     format!(
         "{}, {}, {}",
         path.to_uppercase(),
