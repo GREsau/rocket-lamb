@@ -4,13 +4,12 @@ extern crate failure;
 #[macro_use]
 mod error;
 
+use error::RocketLambError;
 use lambda_http::{Body, Handler, Request, RequestExt, Response};
 use lambda_runtime::{error::HandlerError, Context};
 use rocket::error::LaunchError;
 use rocket::http::{uri::Uri, Header, Method};
 use rocket::local::{Client, LocalRequest, LocalResponse};
-
-pub use error::RocketLambError;
 
 pub struct RocketHandler(Client);
 
