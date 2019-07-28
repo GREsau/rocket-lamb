@@ -1,13 +1,13 @@
 [package]
 name = "rocket_lamb"
 version = "0.1.0"
-authors = ["Graham Esau <graham.esau@newvoicemedia.com>"]
+authors = ["Graham Esau <graham.esau@vonage.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rocket = { version = "0.4.2", default-features = false }
+rocket = { version = "0.4.0", default-features = false }
 lambda_runtime = "0.2.1"
 lambda_http = "0.1.1"
 http = "0.1"

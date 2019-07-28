@@ -1,3 +1,38 @@
+/*!
+A crate to allow running a [Rocket](https://rocket.rs/) webserver as an AWS Lambda Function with API Gateway, built on the [AWS Lambda Rust Runtime](https://github.com/awslabs/aws-lambda-rust-runtime).
+
+The function takes a request from an AWS API Gateway Proxy and converts it into a `LocalRequest` to pass to Rocket. Then it will convert the response from Rocket into the response body that API Gateway understands.
+
+This *should* also work with requests from an AWS Application Load Balancer, but this has not been tested.
+
+## Installation
+
+Add the following to your Cargo.toml `[dependencies]`:
+
+```toml
+rocket_lamb = "0.1.0"
+```
+
+## Usage
+
+```rust,no_run
+#![feature(proc_macro_hygiene, decl_macro)]
+
+use rocket::routes;
+use rocket_lamb::{lambda, RocketHandler};
+
+fn main() {
+    // ignite a new Rocket as you normally world, but instead of launching it...
+    let rocket = rocket::ignite().mount("/", routes![/* ... */]);
+
+    // ...use it to create a new RocketHandler:
+    let handler = RocketHandler::new(rocket).unwrap();
+
+    // then use this to fetch and handle Lambda events:
+    lambda!(handler);
+}
+```
+*/
 #[macro_use]
 extern crate failure;
 
@@ -11,9 +46,25 @@ use rocket::error::LaunchError;
 use rocket::http::{uri::Uri, Header, Method};
 use rocket::local::{Client, LocalRequest, LocalResponse};
 
+pub use lambda_http::lambda;
+
+/// A Lambda handler for API Gateway events that processes requests using `Rocket`.
 pub struct RocketHandler(Client);
 
 impl RocketHandler {
+    /// Creates a new `RocketHandler` from an instance of `Rocket`.
+    ///
+    /// # Errors
+    ///
+    /// If launching the `Rocket` instance would fail, excepting network errors, the `LaunchError` is returned.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use rocket_lamb::RocketHandler;
+    /// let handler = RocketHandler::new(rocket::ignite())?;
+    /// # Ok::<(), rocket::error::LaunchError>(())
+    /// ```
     pub fn new(rocket: rocket::Rocket) -> Result<RocketHandler, LaunchError> {
         let client = Client::untracked(rocket)?;
         Ok(RocketHandler(client))
@@ -29,6 +80,12 @@ impl Handler<Response<Body>> for RocketHandler {
 }
 
 impl RocketHandler {
+    fn run_internal(&self, req: Request) -> Result<Response<Body>, RocketLambError> {
+        let local_req = self.create_rocket_request(req)?;
+        let local_res = local_req.dispatch();
+        to_lambda_response(local_res)
+    }
+
     fn create_rocket_request(&self, req: Request) -> Result<LocalRequest, RocketLambError> {
         let client = &self.0;
         let method = to_rocket_method(req.method())?;
@@ -42,12 +99,6 @@ impl RocketHandler {
         }
         local_req.set_body(req.into_body());
         Ok(local_req)
-    }
-
-    fn run_internal(&self, req: Request) -> Result<Response<Body>, RocketLambError> {
-        let local_req = self.create_rocket_request(req)?;
-        let local_res = local_req.dispatch();
-        to_lambda_response(local_res)
     }
 }
 

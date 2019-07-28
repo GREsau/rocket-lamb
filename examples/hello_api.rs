@@ -1,8 +1,7 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-use lambda_http::lambda;
 use rocket::{get, routes};
-use rocket_lamb::RocketHandler;
+use rocket_lamb::{lambda, RocketHandler};
 
 #[get("/")]
 pub fn hello() -> &'static str {
