@@ -5,14 +5,6 @@ The function takes a request from an AWS API Gateway Proxy and converts it into 
 
 This *should* also work with requests from an AWS Application Load Balancer, but this has not been tested.
 
-## Installation
-
-Add the following to your Cargo.toml `[dependencies]`:
-
-```toml
-rocket_lamb = "0.1.0"
-```
-
 ## Usage
 
 ```rust,no_run
