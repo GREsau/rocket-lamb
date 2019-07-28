@@ -2,10 +2,13 @@
 name = "rocket_lamb"
 description = "A crate to allow running a Rocket webserver as an AWS Lambda Function with API Gateway"
 repository = "https://github.com/GREsau/rocket-lamb"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Graham Esau <graham.esau@vonage.com>"]
 edition = "2018"
 license = "MIT"
+readme = "README.md"
+keywords = ["rocket", "web", "lambda"]
+categories = ["web-programming::http-server"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
