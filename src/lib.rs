@@ -35,15 +35,18 @@ use error::RocketLambError;
 use lambda_http::{Body, Handler, Request, RequestExt, Response};
 use lambda_runtime::{error::HandlerError, Context};
 use rocket::error::LaunchError;
-use rocket::http::{uri::Uri, Header, Method};
+use rocket::http::{uri::Uri, Header};
 use rocket::local::{Client, LocalRequest, LocalResponse};
 use std::collections::HashMap;
 
 pub use lambda_http::lambda;
 
-#[derive(PartialEq, Copy, Clone)]
+/// Used to determine how to encode response content. The default is `Text`.
+#[derive(PartialEq, Copy, Clone, Debug)]
 pub enum ResponseType {
+    /// Send response content to API Gateway as a UTF-8 string.
     Text,
+    /// Send response content to API Gateway Base64-encoded.
     Binary,
 }
 
@@ -51,7 +54,6 @@ pub enum ResponseType {
 pub struct RocketHandler {
     client: Client,
     default_response_type: ResponseType,
-    // TODO allow setting response_types
     response_types: HashMap<String, ResponseType>,
 }
 
@@ -73,7 +75,8 @@ impl RocketHandler {
     /// # Example
     ///
     /// ```rust
-    /// # use rocket_lamb::RocketHandler;
+    /// use rocket_lamb::RocketHandler;
+    ///
     /// let handler = RocketHandler::new(rocket::ignite())?;
     /// # Ok::<(), rocket::error::LaunchError>(())
     /// ```
@@ -86,60 +89,79 @@ impl RocketHandler {
         })
     }
 
-    /// does some stuff!
+    /// Gets the default [ResponseType], which is used for any responses that have not had their Content-Type overriden with [response_type](RocketHandler::response_type).
     ///
     /// # Example
     ///
     /// ```rust
-    /// # use rocket_lamb::{RocketHandler, ResponseType};
-    /// let handler = RocketHandler::new(rocket::ignite())?
-    ///     .default_response(ResponseType::Binary);
+    /// use rocket_lamb::{RocketHandler, ResponseType};
+    ///
+    /// let handler = RocketHandler::new(rocket::ignite())?;
+    /// assert_eq!(handler.get_default_response_type(), ResponseType::Text);
+    /// assert_eq!(handler.get_response_type("text/plain"), ResponseType::Text);
     /// # Ok::<(), rocket::error::LaunchError>(())
     /// ```
-    pub fn default_response(mut self, response_type: ResponseType) -> Self {
+    pub fn get_default_response_type(&self) -> ResponseType {
+        self.default_response_type
+    }
+
+    /// Sets the default [ResponseType], which is used for any responses that have not had their Content-Type overriden with [response_type](RocketHandler::response_type).
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket_lamb::{RocketHandler, ResponseType};
+    ///
+    /// let handler = RocketHandler::new(rocket::ignite())?
+    ///     .default_response_type(ResponseType::Binary);
+    /// assert_eq!(handler.get_default_response_type(), ResponseType::Binary);
+    /// assert_eq!(handler.get_response_type("text/plain"), ResponseType::Binary);
+    /// # Ok::<(), rocket::error::LaunchError>(())
+    /// ```
+    pub fn default_response_type(mut self, response_type: ResponseType) -> Self {
         self.default_response_type = response_type;
         self
     }
 
-    /// does some stuff!
+    /// Gets the configured `ResponseType` for responses with the given Content-Type header.
+    ///
+    /// `content_type` values are treated case-insensitively.
     ///
     /// # Example
     ///
     /// ```rust
-    /// # use rocket_lamb::{RocketHandler, ResponseType};
+    /// use rocket_lamb::{RocketHandler, ResponseType};
+    ///
     /// let handler = RocketHandler::new(rocket::ignite())?
-    ///     .response("application/octet-stream", ResponseType::Binary);
+    ///     .response_type("TEXT/PLAIN", ResponseType::Binary);
+    /// assert_eq!(handler.get_response_type("text/plain"), ResponseType::Binary);
+    /// assert_eq!(handler.get_response_type("application/json"), ResponseType::Text);
     /// # Ok::<(), rocket::error::LaunchError>(())
     /// ```
-    pub fn response(mut self, content_type: &str, response_type: ResponseType) -> Self {
+    pub fn get_response_type(&self, content_type: &str) -> ResponseType {
         self.response_types
-            .insert(content_type.to_lowercase(), response_type);
-        self
+            .get(&content_type.to_lowercase())
+            .map(|rt| *rt)
+            .unwrap_or(self.get_default_response_type())
     }
 
-    /// does some stuff!
+    /// Sets the `ResponseType` for responses with the given Content-Type header.
+    ///
+    /// `content_type` values are treated case-insensitively.
     ///
     /// # Example
     ///
     /// ```rust
-    /// # use rocket_lamb::{RocketHandler, ResponseType};
-    /// # use std::collections::HashMap;
-    /// let mut map = HashMap::new();
-    /// map.insert("image/png", ResponseType::Binary);
-    /// map.insert("image/gif", ResponseType::Binary);
-    /// map.insert("image/jpeg", ResponseType::Binary);
-    /// let mut handler = RocketHandler::new(rocket::ignite())?.responses(map);
+    /// use rocket_lamb::{RocketHandler, ResponseType};
+    ///
+    /// let handler = RocketHandler::new(rocket::ignite())?
+    ///     .response_type("TEXT/PLAIN", ResponseType::Binary);
+    /// assert_eq!(handler.get_response_type("text/plain"), ResponseType::Binary);
     /// # Ok::<(), rocket::error::LaunchError>(())
     /// ```
-    pub fn responses<'a>(
-        mut self,
-        response_types: impl IntoIterator<Item = (&'a str, ResponseType)>,
-    ) -> Self {
-        self.response_types.extend(
-            response_types
-                .into_iter()
-                .map(|(c, r)| (c.to_lowercase(), r)),
-        );
+    pub fn response_type(mut self, content_type: &str, response_type: ResponseType) -> Self {
+        self.response_types
+            .insert(content_type.to_lowercase(), response_type);
         self
     }
 
@@ -173,29 +195,24 @@ impl RocketHandler {
             builder.header(&h.name.to_string(), &h.value.to_string());
         }
 
-        let response_type = self.get_response_type(&local_res);
-        let body = match local_res.body() {
-            Some(b) => match response_type {
-                ResponseType::Text => Body::Text(
-                    b.into_string()
-                        .ok_or_else(|| invalid_response!("response body was not text"))?,
-                ),
-                ResponseType::Binary => Body::Binary(b.into_bytes().unwrap_or_default()),
-            },
-            None => Body::Empty,
+        let response_type = local_res
+            .headers()
+            .get_one("content-type")
+            .unwrap_or_default()
+            .split(';')
+            .next()
+            .map(|ct| self.get_response_type(ct))
+            .unwrap_or(self.default_response_type);
+        let body = match (local_res.body(), response_type) {
+            (Some(b), ResponseType::Text) => Body::Text(
+                b.into_string()
+                    .ok_or_else(|| invalid_response!("response body was not text"))?,
+            ),
+            (Some(b), ResponseType::Binary) => Body::Binary(b.into_bytes().unwrap_or_default()),
+            (None, _) => Body::Empty,
         };
 
         builder.body(body).map_err(|e| invalid_response!("{}", e))
-    }
-
-    fn get_response_type(&self, local_res: &LocalResponse) -> ResponseType {
-        local_res
-            .headers()
-            .get_one("content-type")
-            .and_then(|c| c.split(';').next())
-            .and_then(|c| self.response_types.get(&c.to_lowercase()))
-            .map(|rt| *rt)
-            .unwrap_or(self.default_response_type)
     }
 }
 
@@ -218,17 +235,19 @@ fn get_path_and_query(req: &Request) -> String {
     uri
 }
 
-fn to_rocket_method(method: &http::Method) -> Result<Method, RocketLambError> {
+fn to_rocket_method(method: &http::Method) -> Result<rocket::http::Method, RocketLambError> {
+    use http::Method as H;
+    use rocket::http::Method::*;
     Ok(match *method {
-        http::Method::GET => Method::Get,
-        http::Method::PUT => Method::Put,
-        http::Method::POST => Method::Post,
-        http::Method::DELETE => Method::Delete,
-        http::Method::OPTIONS => Method::Options,
-        http::Method::HEAD => Method::Head,
-        http::Method::TRACE => Method::Trace,
-        http::Method::CONNECT => Method::Connect,
-        http::Method::PATCH => Method::Patch,
+        H::GET => Get,
+        H::PUT => Put,
+        H::POST => Post,
+        H::DELETE => Delete,
+        H::OPTIONS => Options,
+        H::HEAD => Head,
+        H::TRACE => Trace,
+        H::CONNECT => Connect,
+        H::PATCH => Patch,
         _ => return Err(invalid_request!("unknown method '{}'", method)),
     })
 }
