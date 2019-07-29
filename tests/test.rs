@@ -3,9 +3,9 @@
 #[macro_use]
 extern crate rocket;
 
-use lambda_http::{Body, Handler, Response};
+use lambda_http::{Body, Handler, Request, Response};
 use lambda_runtime::Context;
-use rocket_lamb::RocketHandler;
+use rocket_lamb::{ResponseType, RocketHandler};
 use std::error::Error;
 use std::fs::File;
 
@@ -22,40 +22,59 @@ fn upper(path: String, query: String, body: String) -> String {
     )
 }
 
+fn make_rocket() -> rocket::Rocket {
+    rocket::ignite()
+        .mount("/", routes![upper])
+        .register(catchers![not_found])
+}
+
+fn get_request(json_file: &'static str) -> Result<Request, Box<dyn Error>> {
+    let file = File::open(json_file)?;
+    Ok(lambda_http::request::from_reader(file)?)
+}
+
 mod test {
     use super::*;
 
     #[test]
     fn ok() -> Result<(), Box<dyn Error>> {
-        let rocket = rocket::ignite()
-            .mount("/", routes![upper])
-            .register(catchers![not_found]);
-        let mut handler = RocketHandler::new(rocket)?;
+        let mut handler = RocketHandler::new(make_rocket())?;
 
-        let file = File::open("tests/request_upper.json")?;
-        let req = lambda_http::request::from_reader(file)?;
-        let response = handler.run(req, Context::default())?;
+        let req = get_request("tests/request_upper.json")?;
+        let res = handler.run(req, Context::default())?;
 
-        assert_eq!(response.status(), 200);
-        assert_header(&response, "content-type", "text/plain; charset=utf-8");
-        assert_eq!(*response.body(), Body::Text("ONE, TWO, THREE".to_string()));
+        assert_eq!(res.status(), 200);
+        assert_header(&res, "content-type", "text/plain; charset=utf-8");
+        assert_eq!(*res.body(), Body::Text("ONE, TWO, THREE".to_string()));
+        Ok(())
+    }
+
+    #[test]
+    fn ok_binary_default() -> Result<(), Box<dyn Error>> {
+        let mut handler = RocketHandler::new(make_rocket())?.default_response(ResponseType::Binary);
+
+        let req = get_request("tests/request_upper.json")?;
+        let res = handler.run(req, Context::default())?;
+
+        assert_eq!(res.status(), 200);
+        assert_header(&res, "content-type", "text/plain; charset=utf-8");
+        assert_eq!(
+            *res.body(),
+            Body::Binary("ONE, TWO, THREE".to_owned().into_bytes())
+        );
         Ok(())
     }
 
     #[test]
     fn not_found() -> Result<(), Box<dyn Error>> {
-        let rocket = rocket::ignite()
-            .mount("/", routes![upper])
-            .register(catchers![not_found]);
-        let mut handler = RocketHandler::new(rocket)?;
+        let mut handler = RocketHandler::new(make_rocket())?;
 
-        let file = File::open("tests/request_not_found.json")?;
-        let req = lambda_http::request::from_reader(file)?;
-        let response = handler.run(req, Context::default())?;
+        let req = get_request("tests/request_not_found.json")?;
+        let res = handler.run(req, Context::default())?;
 
-        assert_eq!(response.status(), 404);
-        assert_eq!(response.headers().contains_key("content-type"), false);
-        assert!(response.body().is_empty(), "Response body should be empty");
+        assert_eq!(res.status(), 404);
+        assert_eq!(res.headers().contains_key("content-type"), false);
+        assert!(res.body().is_empty(), "Response body should be empty");
         Ok(())
     }
 

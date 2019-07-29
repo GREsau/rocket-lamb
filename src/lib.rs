@@ -37,11 +37,31 @@ use lambda_runtime::{error::HandlerError, Context};
 use rocket::error::LaunchError;
 use rocket::http::{uri::Uri, Header, Method};
 use rocket::local::{Client, LocalRequest, LocalResponse};
+use std::collections::HashMap;
 
 pub use lambda_http::lambda;
 
+#[derive(PartialEq, Copy, Clone)]
+pub enum ResponseType {
+    Text,
+    Binary,
+}
+
 /// A Lambda handler for API Gateway events that processes requests using `Rocket`.
-pub struct RocketHandler(Client);
+pub struct RocketHandler {
+    client: Client,
+    default_response_type: ResponseType,
+    // TODO allow setting response_types
+    response_types: HashMap<String, ResponseType>,
+}
+
+impl Handler<Response<Body>> for RocketHandler {
+    fn run(&mut self, req: Request, _ctx: Context) -> Result<Response<Body>, HandlerError> {
+        self.run_internal(req)
+            .map_err(failure::Error::from)
+            .map_err(failure::Error::into)
+    }
+}
 
 impl RocketHandler {
     /// Creates a new `RocketHandler` from an instance of `Rocket`.
@@ -59,30 +79,29 @@ impl RocketHandler {
     /// ```
     pub fn new(rocket: rocket::Rocket) -> Result<RocketHandler, LaunchError> {
         let client = Client::untracked(rocket)?;
-        Ok(RocketHandler(client))
+        Ok(RocketHandler {
+            client,
+            default_response_type: ResponseType::Text,
+            response_types: HashMap::new(),
+        })
     }
-}
 
-impl Handler<Response<Body>> for RocketHandler {
-    fn run(&mut self, req: Request, _ctx: Context) -> Result<Response<Body>, HandlerError> {
-        self.run_internal(req)
-            .map_err(failure::Error::from)
-            .map_err(failure::Error::into)
+    // TODO docs
+    pub fn default_response(mut self, rt: ResponseType) -> Self {
+        self.default_response_type = rt;
+        self
     }
-}
 
-impl RocketHandler {
     fn run_internal(&self, req: Request) -> Result<Response<Body>, RocketLambError> {
         let local_req = self.create_rocket_request(req)?;
         let local_res = local_req.dispatch();
-        to_lambda_response(local_res)
+        self.create_lambda_response(local_res)
     }
 
     fn create_rocket_request(&self, req: Request) -> Result<LocalRequest, RocketLambError> {
-        let client = &self.0;
         let method = to_rocket_method(req.method())?;
         let uri = get_path_and_query(&req);
-        let mut local_req = client.req(method, uri);
+        let mut local_req = self.client.req(method, uri);
         for (name, value) in req.headers() {
             match value.to_str() {
                 Ok(v) => local_req.add_header(Header::new(name.to_string(), v.to_string())),
@@ -92,27 +111,36 @@ impl RocketHandler {
         local_req.set_body(req.into_body());
         Ok(local_req)
     }
-}
 
-fn to_lambda_response(mut local_res: LocalResponse) -> Result<Response<Body>, RocketLambError> {
-    let mut builder = Response::builder();
-    builder.status(local_res.status().code);
-    for h in local_res.headers().iter() {
-        builder.header(&h.name.to_string(), &h.value.to_string());
+    fn create_lambda_response(
+        &self,
+        mut local_res: LocalResponse,
+    ) -> Result<Response<Body>, RocketLambError> {
+        let mut builder = Response::builder();
+        builder.status(local_res.status().code);
+        for h in local_res.headers().iter() {
+            builder.header(&h.name.to_string(), &h.value.to_string());
+        }
+
+        // TODO check response_types
+        let body = match local_res.body() {
+            Some(b) => {
+                if self.default_response_type == ResponseType::Text {
+                    Body::Text(
+                        b.into_string()
+                            .ok_or_else(|| invalid_response!("response body was not text"))?,
+                    )
+                } else {
+                    Body::Binary(b.into_bytes().unwrap_or_default())
+                }
+            }
+            None => Body::Empty,
+        };
+
+        builder
+            .body(body)
+            .map_err(|e| invalid_response!("error creating Response: {}", e))
     }
-
-    // TODO support binary response bodies
-    let body = match local_res.body() {
-        Some(b) => Body::Text(
-            b.into_string()
-                .ok_or_else(|| invalid_response!("could not read response body as UTF-8 text"))?,
-        ),
-        None => Body::Empty,
-    };
-
-    builder
-        .body(body)
-        .map_err(|e| invalid_response!("error creating Response: {}", e))
 }
 
 fn get_path_and_query(req: &Request) -> String {
