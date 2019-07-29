@@ -86,20 +86,51 @@ impl RocketHandler {
         })
     }
 
-    // TODO docs
+    /// does some stuff!
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use rocket_lamb::{RocketHandler, ResponseType};
+    /// let handler = RocketHandler::new(rocket::ignite())?
+    ///     .default_response(ResponseType::Binary);
+    /// # Ok::<(), rocket::error::LaunchError>(())
+    /// ```
     pub fn default_response(mut self, response_type: ResponseType) -> Self {
         self.default_response_type = response_type;
         self
     }
 
-    // TODO docs
+    /// does some stuff!
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use rocket_lamb::{RocketHandler, ResponseType};
+    /// let handler = RocketHandler::new(rocket::ignite())?
+    ///     .response("application/octet-stream", ResponseType::Binary);
+    /// # Ok::<(), rocket::error::LaunchError>(())
+    /// ```
     pub fn response(mut self, content_type: &str, response_type: ResponseType) -> Self {
         self.response_types
             .insert(content_type.to_lowercase(), response_type);
         self
     }
 
-    // TODO docs
+    /// does some stuff!
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use rocket_lamb::{RocketHandler, ResponseType};
+    /// # use std::collections::HashMap;
+    /// let mut map = HashMap::new();
+    /// map.insert("image/png", ResponseType::Binary);
+    /// map.insert("image/gif", ResponseType::Binary);
+    /// map.insert("image/jpeg", ResponseType::Binary);
+    /// let mut handler = RocketHandler::new(rocket::ignite())?.responses(map);
+    /// # Ok::<(), rocket::error::LaunchError>(())
+    /// ```
     pub fn responses<'a>(
         mut self,
         response_types: impl IntoIterator<Item = (&'a str, ResponseType)>,
@@ -163,7 +194,7 @@ impl RocketHandler {
             .get_one("content-type")
             .and_then(|c| c.split(';').next())
             .and_then(|c| self.response_types.get(&c.to_lowercase()))
-            .map(|c| *c)
+            .map(|rt| *rt)
             .unwrap_or(self.default_response_type)
     }
 }
