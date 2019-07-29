@@ -6,6 +6,7 @@ extern crate rocket;
 use lambda_http::{Body, Handler, Request, Response};
 use lambda_runtime::Context;
 use rocket_lamb::{ResponseType, RocketHandler};
+use std::collections::HashMap;
 use std::error::Error;
 use std::fs::File;
 
@@ -52,6 +53,41 @@ mod test {
     #[test]
     fn ok_binary_default() -> Result<(), Box<dyn Error>> {
         let mut handler = RocketHandler::new(make_rocket())?.default_response(ResponseType::Binary);
+
+        let req = get_request("tests/request_upper.json")?;
+        let res = handler.run(req, Context::default())?;
+
+        assert_eq!(res.status(), 200);
+        assert_header(&res, "content-type", "text/plain; charset=utf-8");
+        assert_eq!(
+            *res.body(),
+            Body::Binary("ONE, TWO, THREE".to_owned().into_bytes())
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn ok_binary() -> Result<(), Box<dyn Error>> {
+        let mut handler =
+            RocketHandler::new(make_rocket())?.response("TEXT/PLAIN", ResponseType::Binary);
+
+        let req = get_request("tests/request_upper.json")?;
+        let res = handler.run(req, Context::default())?;
+
+        assert_eq!(res.status(), 200);
+        assert_header(&res, "content-type", "text/plain; charset=utf-8");
+        assert_eq!(
+            *res.body(),
+            Body::Binary("ONE, TWO, THREE".to_owned().into_bytes())
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn ok_binary_using_responses() -> Result<(), Box<dyn Error>> {
+        let mut map = HashMap::new();
+        map.insert("TEXT/PLAIN", ResponseType::Binary);
+        let mut handler = RocketHandler::new(make_rocket())?.responses(map);
 
         let req = get_request("tests/request_upper.json")?;
         let res = handler.run(req, Context::default())?;

@@ -87,8 +87,28 @@ impl RocketHandler {
     }
 
     // TODO docs
-    pub fn default_response(mut self, rt: ResponseType) -> Self {
-        self.default_response_type = rt;
+    pub fn default_response(mut self, response_type: ResponseType) -> Self {
+        self.default_response_type = response_type;
+        self
+    }
+
+    // TODO docs
+    pub fn response(mut self, content_type: &str, response_type: ResponseType) -> Self {
+        self.response_types
+            .insert(content_type.to_lowercase(), response_type);
+        self
+    }
+
+    // TODO docs
+    pub fn responses<'a>(
+        mut self,
+        response_types: impl IntoIterator<Item = (&'a str, ResponseType)>,
+    ) -> Self {
+        self.response_types.extend(
+            response_types
+                .into_iter()
+                .map(|(c, r)| (c.to_lowercase(), r)),
+        );
         self
     }
 
@@ -122,24 +142,29 @@ impl RocketHandler {
             builder.header(&h.name.to_string(), &h.value.to_string());
         }
 
-        // TODO check response_types
+        let response_type = self.get_response_type(&local_res);
         let body = match local_res.body() {
-            Some(b) => {
-                if self.default_response_type == ResponseType::Text {
-                    Body::Text(
-                        b.into_string()
-                            .ok_or_else(|| invalid_response!("response body was not text"))?,
-                    )
-                } else {
-                    Body::Binary(b.into_bytes().unwrap_or_default())
-                }
-            }
+            Some(b) => match response_type {
+                ResponseType::Text => Body::Text(
+                    b.into_string()
+                        .ok_or_else(|| invalid_response!("response body was not text"))?,
+                ),
+                ResponseType::Binary => Body::Binary(b.into_bytes().unwrap_or_default()),
+            },
             None => Body::Empty,
         };
 
-        builder
-            .body(body)
-            .map_err(|e| invalid_response!("error creating Response: {}", e))
+        builder.body(body).map_err(|e| invalid_response!("{}", e))
+    }
+
+    fn get_response_type(&self, local_res: &LocalResponse) -> ResponseType {
+        local_res
+            .headers()
+            .get_one("content-type")
+            .and_then(|c| c.split(';').next())
+            .and_then(|c| self.response_types.get(&c.to_lowercase()))
+            .map(|c| *c)
+            .unwrap_or(self.default_response_type)
     }
 }
 
