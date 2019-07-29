@@ -28,3 +28,5 @@ fn main() {
     lambda!(handler);
 }
 ```
+
+For a full example including instructions on deploying to Lambda, see [Example Rocket Lamb API](https://github.com/GREsau/example-rocket-lamb-api).
