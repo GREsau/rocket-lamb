@@ -2,7 +2,7 @@
 name = "rocket_lamb"
 description = "A crate to allow running a Rocket webserver as an AWS Lambda Function with API Gateway"
 repository = "https://github.com/GREsau/rocket-lamb"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Graham Esau <graham.esau@vonage.com>"]
 edition = "2018"
 license = "MIT"
