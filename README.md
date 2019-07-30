@@ -14,18 +14,19 @@ This *should* also work with requests from an AWS Application Load Balancer, but
 ```rust
 #![feature(proc_macro_hygiene, decl_macro)]
 
-use rocket::routes;
-use rocket_lamb::{lambda, RocketHandler};
+#[macro_use] extern crate rocket;
+use rocket_lamb::RocketExt;
+
+#[get("/")]
+fn hello() -> &'static str {
+    "Hello, world!"
+}
 
 fn main() {
-    // ignite a new Rocket as you normally world, but instead of launching it...
-    let rocket = rocket::ignite().mount("/", routes![/* ... */]);
-
-    // ...use it to create a new RocketHandler:
-    let handler = RocketHandler::new(rocket).unwrap();
-
-    // then use this to fetch and handle Lambda events:
-    lambda!(handler);
+    rocket::ignite()
+        .mount("/hello", routes![hello])
+        .lambda() // launch the Rocket as a Lambda
+        .launch();
 }
 ```
 

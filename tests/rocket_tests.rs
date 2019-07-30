@@ -5,7 +5,7 @@ extern crate rocket;
 
 use lambda_http::{Body, Handler, Request, Response};
 use lambda_runtime::Context;
-use rocket_lamb::{ResponseType, RocketHandler};
+use rocket_lamb::{ResponseType, RocketExt};
 use std::error::Error;
 use std::fs::File;
 
@@ -38,7 +38,7 @@ mod test {
 
     #[test]
     fn ok() -> Result<(), Box<dyn Error>> {
-        let mut handler = RocketHandler::new(make_rocket())?;
+        let mut handler = make_rocket().lambda().into_handler()?;
 
         let req = get_request("tests/request_upper.json")?;
         let res = handler.run(req, Context::default())?;
@@ -51,8 +51,10 @@ mod test {
 
     #[test]
     fn ok_binary_default() -> Result<(), Box<dyn Error>> {
-        let mut handler =
-            RocketHandler::new(make_rocket())?.default_response_type(ResponseType::Binary);
+        let mut handler = make_rocket()
+            .lambda()
+            .default_response_type(ResponseType::Binary)
+            .into_handler()?;
 
         let req = get_request("tests/request_upper.json")?;
         let res = handler.run(req, Context::default())?;
@@ -68,8 +70,10 @@ mod test {
 
     #[test]
     fn ok_binary() -> Result<(), Box<dyn Error>> {
-        let mut handler =
-            RocketHandler::new(make_rocket())?.response_type("TEXT/PLAIN", ResponseType::Binary);
+        let mut handler = make_rocket()
+            .lambda()
+            .response_type("TEXT/PLAIN", ResponseType::Binary)
+            .into_handler()?;
 
         let req = get_request("tests/request_upper.json")?;
         let res = handler.run(req, Context::default())?;
@@ -85,7 +89,7 @@ mod test {
 
     #[test]
     fn not_found() -> Result<(), Box<dyn Error>> {
-        let mut handler = RocketHandler::new(make_rocket())?;
+        let mut handler = make_rocket().lambda().into_handler()?;
 
         let req = get_request("tests/request_not_found.json")?;
         let res = handler.run(req, Context::default())?;

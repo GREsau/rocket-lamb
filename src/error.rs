@@ -1,5 +1,5 @@
 #[derive(Debug, Fail)]
-pub enum RocketLambError {
+pub(crate) enum RocketLambError {
     #[fail(display = "could not transform request: {}", 0)]
     InvalidRequest(String),
     #[fail(display = "could not transform response: {}", 0)]
