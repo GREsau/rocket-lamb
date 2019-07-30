@@ -30,4 +30,4 @@ fn main() {
 }
 ```
 
-For a full example including instructions on deploying to Lambda, see [Example Rocket Lamb API](https://github.com/GREsau/example-rocket-lamb-api).
+For a full example including instructions on deploying to Lambda and configuring binary responses, see [Example Rocket Lamb API](https://github.com/GREsau/example-rocket-lamb-api).
