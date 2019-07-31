@@ -50,7 +50,7 @@ pub enum ResponseType {
     Binary,
 }
 
-/// Extensions for `rocket::Rocket` to make it easier to crate Lambda handlers.
+/// Extensions for `rocket::Rocket` to make it easier to create Lambda handlers.
 pub trait RocketExt {
     /// Create a new `RocketLamb` from the given `Rocket`.
     ///
