@@ -5,12 +5,18 @@ extern crate rocket;
 
 use lambda_http::{Body, Handler, Request, Response};
 use lambda_runtime::Context;
+use rocket::http::uri::Origin;
 use rocket_lamb::{ResponseType, RocketExt};
 use std::error::Error;
 use std::fs::File;
 
 #[catch(404)]
 fn not_found() {}
+
+#[get("/path")]
+fn get_path<'r>(origin: &'r Origin<'r>) -> &'r str {
+    origin.path()
+}
 
 #[post("/upper/<path>?<query>", data = "<body>")]
 fn upper(path: String, query: String, body: String) -> String {
@@ -24,7 +30,7 @@ fn upper(path: String, query: String, body: String) -> String {
 
 fn make_rocket() -> rocket::Rocket {
     rocket::ignite()
-        .mount("/", routes![upper])
+        .mount("/", routes![get_path, upper])
         .register(catchers![not_found])
 }
 
@@ -38,7 +44,7 @@ mod test {
 
     #[test]
     fn ok() -> Result<(), Box<dyn Error>> {
-        let mut handler = make_rocket().lambda().into_handler()?;
+        let mut handler = make_rocket().lambda().into_handler();
 
         let req = get_request("tests/request_upper.json")?;
         let res = handler.run(req, Context::default())?;
@@ -54,7 +60,7 @@ mod test {
         let mut handler = make_rocket()
             .lambda()
             .default_response_type(ResponseType::Binary)
-            .into_handler()?;
+            .into_handler();
 
         let req = get_request("tests/request_upper.json")?;
         let res = handler.run(req, Context::default())?;
@@ -73,7 +79,7 @@ mod test {
         let mut handler = make_rocket()
             .lambda()
             .response_type("TEXT/PLAIN", ResponseType::Binary)
-            .into_handler()?;
+            .into_handler();
 
         let req = get_request("tests/request_upper.json")?;
         let res = handler.run(req, Context::default())?;
@@ -88,8 +94,37 @@ mod test {
     }
 
     #[test]
+    fn ok_path_with_base_url() -> Result<(), Box<dyn Error>> {
+        let mut handler = make_rocket().lambda().into_handler();
+
+        let req = get_request("tests/request_get_path.json")?;
+        let res = handler.run(req, Context::default())?;
+
+        assert_eq!(res.status(), 200);
+        assert_header(&res, "content-type", "text/plain; charset=utf-8");
+        assert_eq!(*res.body(), Body::Text("/Testing/path".to_string()));
+        Ok(())
+    }
+
+    #[test]
+    fn ok_path_without_base_url() -> Result<(), Box<dyn Error>> {
+        let mut handler = make_rocket()
+            .lambda()
+            .include_api_gateway_base_path(false)
+            .into_handler();
+
+        let req = get_request("tests/request_get_path.json")?;
+        let res = handler.run(req, Context::default())?;
+
+        assert_eq!(res.status(), 200);
+        assert_header(&res, "content-type", "text/plain; charset=utf-8");
+        assert_eq!(*res.body(), Body::Text("/path".to_string()));
+        Ok(())
+    }
+
+    #[test]
     fn not_found() -> Result<(), Box<dyn Error>> {
-        let mut handler = make_rocket().lambda().into_handler()?;
+        let mut handler = make_rocket().lambda().into_handler();
 
         let req = get_request("tests/request_not_found.json")?;
         let res = handler.run(req, Context::default())?;

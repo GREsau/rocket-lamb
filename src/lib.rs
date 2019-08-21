@@ -27,6 +27,8 @@ fn main() {
 ```
 */
 
+// TODO update doc comments - some functions now have different error/panic behaviour.
+
 #[macro_use]
 extern crate failure;
 
@@ -34,10 +36,9 @@ extern crate failure;
 mod error;
 mod handler;
 
+use handler::LazyClient;
 pub use handler::RocketHandler;
 use lambda_http::lambda;
-use rocket::error::LaunchError;
-use rocket::local::Client;
 use rocket::Rocket;
 use std::collections::HashMap;
 
@@ -75,6 +76,7 @@ pub struct RocketLamb {
     rocket: Rocket,
     default_response_type: ResponseType,
     response_types: HashMap<String, ResponseType>,
+    include_api_gateway_base_path: bool,
 }
 
 impl RocketLamb {
@@ -92,6 +94,7 @@ impl RocketLamb {
             rocket,
             default_response_type: ResponseType::Text,
             response_types: HashMap::new(),
+            include_api_gateway_base_path: true,
         }
     }
 
@@ -99,34 +102,25 @@ impl RocketLamb {
     ///
     /// Alternatively, you can use the [launch()](RocketLamb::launch) method.
     ///
-    /// # Errors
-    ///
-    /// If launching the `Rocket` instance would fail, excepting network errors, the `LaunchError` is returned.
-    ///
     /// # Example
     ///
     /// ```rust,no_run
     /// use rocket_lamb::RocketExt;
     /// use lambda_http::lambda;
     ///
-    /// let handler = rocket::ignite().lambda().into_handler()?;
+    /// let handler = rocket::ignite().lambda().into_handler();
     /// lambda!(handler);
-    /// # Ok::<(), rocket::error::LaunchError>(())
     /// ```
-    pub fn into_handler(self) -> Result<RocketHandler, LaunchError> {
-        let client = Client::untracked(self.rocket)?;
-        Ok(RocketHandler {
-            client,
+    pub fn into_handler(self) -> RocketHandler {
+        RocketHandler {
+            client: LazyClient::Uninitialized(self.rocket),
             default_response_type: self.default_response_type,
             response_types: self.response_types,
-        })
+            include_api_gateway_base_path: self.include_api_gateway_base_path,
+        }
     }
 
     /// Starts handling Lambda events.
-    ///
-    /// # Errors
-    ///
-    /// If launching the `Rocket` instance fails, the `LaunchError` is returned.
     ///
     /// # Panics
     ///
@@ -140,11 +134,8 @@ impl RocketLamb {
     ///
     /// rocket::ignite().lambda().launch();
     /// ```
-    pub fn launch(self) -> LaunchError {
-        match self.into_handler() {
-            Ok(h) => lambda!(h),
-            Err(e) => return e,
-        };
+    pub fn launch(self) -> ! {
+        lambda!(self.into_handler());
         unreachable!("lambda! should loop forever (or panic)")
     }
 
@@ -199,8 +190,8 @@ impl RocketLamb {
     pub fn get_response_type(&self, content_type: &str) -> ResponseType {
         self.response_types
             .get(&content_type.to_lowercase())
-            .map(|rt| *rt)
-            .unwrap_or(self.get_default_response_type())
+            .copied()
+            .unwrap_or(self.default_response_type)
     }
 
     /// Sets the `ResponseType` for responses with the given Content-Type header.
@@ -221,6 +212,28 @@ impl RocketLamb {
     pub fn response_type(mut self, content_type: &str, response_type: ResponseType) -> Self {
         self.response_types
             .insert(content_type.to_lowercase(), response_type);
+        self
+    }
+
+    /// Sets whether or not the handler should determine the API Gateway base path and prepend it to the path of request URLs.
+    ///
+    /// When using the default API Gateway URL ({###}.execute-api.{region}.amazonaws.com/{stage}/), then the base path would
+    /// be "/{stage}". If this setting is set to `true` (the default), then all mounted routes will be made available under
+    /// "/{stage}", and all incoming requests to the Rocket webserver will have "/{stage}" at the beginning of the URL path.
+    /// This is necessary to make absolute URLs in responses (e.g. in the `Location` response header for redirects) function
+    /// correctly when hosting the server using the default API Gateway URL.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket_lamb::RocketExt;
+    ///
+    /// let lamb = rocket::ignite()
+    ///     .lambda()
+    ///     .include_api_gateway_base_path(false);
+    /// ```
+    pub fn include_api_gateway_base_path(mut self, setting: bool) -> Self {
+        self.include_api_gateway_base_path = setting;
         self
     }
 }
