@@ -1,20 +1,19 @@
+use crate::config::Config;
 use crate::error::RocketLambError;
 use crate::ResponseType;
+use http::header::HOST;
 use lambda_http::request::RequestContext;
 use lambda_http::{Body, Handler, Request, RequestExt, Response};
 use lambda_runtime::{error::HandlerError, Context};
 use rocket::http::{uri::Uri, Header};
 use rocket::local::{Client, LocalRequest, LocalResponse};
 use rocket::{Rocket, Route};
-use std::collections::HashMap;
 use std::mem;
 
 /// A Lambda handler for API Gateway events that processes requests using `Rocket`.
 pub struct RocketHandler {
     pub(super) client: LazyClient,
-    pub(super) default_response_type: ResponseType,
-    pub(super) response_types: HashMap<String, ResponseType>,
-    pub(super) include_api_gateway_base_path: bool,
+    pub(super) config: Config,
 }
 
 pub(super) enum LazyClient {
@@ -96,9 +95,9 @@ impl RocketHandler {
             .unwrap_or_default()
             .split(';')
             .next()
-            .and_then(|ct| self.response_types.get(&ct.to_lowercase()))
+            .and_then(|ct| self.config.response_types.get(&ct.to_lowercase()))
             .copied()
-            .unwrap_or(self.default_response_type);
+            .unwrap_or(self.config.default_response_type);
         let body = match (local_res.body(), response_type) {
             (Some(b), ResponseType::Text) => Body::Text(
                 b.into_string()
@@ -112,14 +111,14 @@ impl RocketHandler {
     }
 
     fn get_api_gateway_base_path(&self, req: &Request) -> Option<String> {
-        if !self.include_api_gateway_base_path {
+        if !self.config.include_api_gateway_base_path {
             return None;
         }
 
         // This feels very gnarly - a more robust way to find the base path
         // would probably be to use the `path` from the request context on the
         // lambda event, but lambda_runtime does not expose this...
-        let host = req.headers().get("host")?.to_str().ok()?;
+        let host = req.headers().get(HOST)?.to_str().ok()?;
         if host.ends_with(".amazonaws.com") {
             if let RequestContext::ApiGateway { mut stage, .. } = req.request_context() {
                 stage.insert(0, '/');
