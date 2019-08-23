@@ -1,5 +1,3 @@
-// TODO update doc comments - some functions now have different error/panic behaviour.
-
 use crate::config::Config;
 use crate::handler::{LazyClient, RocketHandler};
 use lambda_http::lambda;
@@ -57,11 +55,11 @@ impl RocketHandlerBuilder {
         }
     }
 
-    /// Starts handling Lambda events.
+    /// Starts handling Lambda events by polling for events using Lambda's Runtime APIs.
     ///
     /// # Panics
     ///
-    /// This panics if the required Lambda runtime environment variables are not set.
+    /// This panics if the required Lambda runtime environment variables are not set, or if the `Rocket` used to create the builder fails to launch.
     ///
     /// # Example
     ///
