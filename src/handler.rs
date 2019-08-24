@@ -10,7 +10,7 @@ use rocket::local::{Client, LocalRequest, LocalResponse};
 use rocket::{Rocket, Route};
 use std::mem;
 
-/// A Lambda handler for API Gateway events that processes requests using `Rocket`.
+/// A Lambda handler for API Gateway events that processes requests using a [Rocket](rocket::Rocket) instance.
 pub struct RocketHandler {
     pub(super) client: LazyClient,
     pub(super) config: Config,

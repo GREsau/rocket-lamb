@@ -12,14 +12,14 @@ pub enum ResponseType {
     Binary,
 }
 
-/// A wrapper around a [rocket::Rocket] that can be used to handle Lambda events.
+/// A builder to create and configure a [RocketHandler](RocketHandler).
 pub struct RocketHandlerBuilder {
     rocket: Rocket,
     config: Config,
 }
 
 impl RocketHandlerBuilder {
-    /// Create a new `RocketHandlerBuilder`. Alternatively, you can use [rocket.lambda()](RocketExt::lambda).
+    /// Create a new `RocketHandlerBuilder`. Alternatively, you can use [rocket.lambda()](crate::RocketExt::lambda).
     ///
     /// # Example
     ///
@@ -57,9 +57,11 @@ impl RocketHandlerBuilder {
 
     /// Starts handling Lambda events by polling for events using Lambda's Runtime APIs.
     ///
+    /// This function does not return, as it will loop forever (unless it panics).
+    ///
     /// # Panics
     ///
-    /// This panics if the required Lambda runtime environment variables are not set, or if the `Rocket` used to create the builder fails to launch.
+    /// This panics if the required Lambda runtime environment variables are not set, or if the `Rocket` used to create the builder was misconfigured.
     ///
     /// # Example
     ///
@@ -154,11 +156,13 @@ impl RocketHandlerBuilder {
 
     /// Sets whether or not the handler should determine the API Gateway base path and prepend it to the path of request URLs.
     ///
-    /// When using the default API Gateway URL ({###}.execute-api.{region}.amazonaws.com/{stage}/), then the base path would
-    /// be "/{stage}". If this setting is set to `true` (the default), then all mounted routes will be made available under
-    /// "/{stage}", and all incoming requests to the Rocket webserver will have "/{stage}" at the beginning of the URL path.
-    /// This is necessary to make absolute URLs in responses (e.g. in the `Location` response header for redirects) function
-    /// correctly when hosting the server using the default API Gateway URL.
+    /// By default, this setting is `true`.
+    ///
+    /// When using the default API Gateway URL `1234567890.execute-api.region.amazonaws.com/{stage}/`, then the base path would
+    /// be `/{stage}`. If this setting is set to `true` (the default), then all mounted routes will be made available under
+    /// `/{stage}`, and all incoming requests to Rocket will have `/{stage}` at the beginning of the URL path. This is necessary
+    /// to make absolute URLs in responses (e.g. in the `Location` response header for redirects) function correctly when
+    /// hosting the server using the default API Gateway URL.
     ///
     /// # Example
     ///
