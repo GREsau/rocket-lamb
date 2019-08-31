@@ -1,4 +1,4 @@
-use crate::config::Config;
+use crate::config::{BasePathBehaviour, Config};
 use crate::handler::{LazyClient, RocketHandler};
 use lambda_http::lambda;
 use rocket::Rocket;
@@ -154,6 +154,8 @@ impl RocketHandlerBuilder {
         self
     }
 
+    /// TODO update documentation
+    ///
     /// Sets whether or not the handler should determine the API Gateway base path and prepend it to the path of request URLs.
     ///
     /// By default, this setting is `true`.
@@ -167,14 +169,14 @@ impl RocketHandlerBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use rocket_lamb::RocketExt;
+    /// use rocket_lamb::{BasePathBehaviour, RocketExt};
     ///
     /// let builder = rocket::ignite()
     ///     .lambda()
-    ///     .include_api_gateway_base_path(false);
+    ///     .base_path_behaviour(BasePathBehaviour::Exclude);
     /// ```
-    pub fn include_api_gateway_base_path(mut self, setting: bool) -> Self {
-        self.config.include_api_gateway_base_path = setting;
+    pub fn base_path_behaviour(mut self, setting: BasePathBehaviour) -> Self {
+        self.config.base_path_behaviour = setting;
         self
     }
 }

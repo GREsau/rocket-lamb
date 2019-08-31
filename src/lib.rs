@@ -40,8 +40,10 @@ mod error;
 mod builder;
 mod config;
 mod handler;
+mod request_ext;
 
 pub use builder::*;
+pub use config::BasePathBehaviour;
 pub use handler::*;
 
 /// Extensions for `rocket::Rocket` to make it easier to create Lambda handlers.

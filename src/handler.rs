@@ -1,8 +1,7 @@
-use crate::config::Config;
+use crate::config::{BasePathBehaviour, Config};
 use crate::error::RocketLambError;
+use crate::request_ext::RequestExt as _;
 use crate::ResponseType;
-use http::header::HOST;
-use lambda_http::request::RequestContext;
 use lambda_http::{Body, Handler, Request, RequestExt, Response};
 use lambda_runtime::{error::HandlerError, Context};
 use rocket::http::{uri::Uri, Header};
@@ -40,9 +39,12 @@ impl RocketHandler {
                     LazyClient::Uninitialized(rocket) => rocket,
                     _ => unreachable!("LazyClient must be uninitialized at this point."),
                 };
-                if let Some(base_path) = self.get_api_gateway_base_path(req) {
-                    let routes: Vec<Route> = rocket.routes().cloned().collect();
-                    rocket = rocket.mount(&base_path, routes);
+                if self.config.base_path_behaviour == BasePathBehaviour::RemountAndInclude {
+                    let base_path = req.base_path();
+                    if !base_path.is_empty() {
+                        let routes: Vec<Route> = rocket.routes().cloned().collect();
+                        rocket = rocket.mount(&base_path, routes);
+                    }
                 }
                 let client = Client::untracked(rocket).unwrap();
                 self.client = LazyClient::Ready(client);
@@ -110,29 +112,11 @@ impl RocketHandler {
         builder.body(body).map_err(|e| invalid_response!("{}", e))
     }
 
-    fn get_api_gateway_base_path(&self, req: &Request) -> Option<String> {
-        if !self.config.include_api_gateway_base_path {
-            return None;
-        }
-
-        // This feels very gnarly - a more robust way to find the base path
-        // would probably be to use the `path` from the request context on the
-        // lambda event, but lambda_runtime does not expose this...
-        let host = req.headers().get(HOST)?.to_str().ok()?;
-        if host.ends_with(".amazonaws.com") {
-            if let RequestContext::ApiGateway { mut stage, .. } = req.request_context() {
-                stage.insert(0, '/');
-                return Some(stage);
-            }
-        }
-        None
-    }
-
     fn get_path_and_query(&self, req: &Request) -> String {
-        let mut uri = req.uri().path().to_string();
-        if let Some(base_path) = self.get_api_gateway_base_path(&req) {
-            uri.insert_str(0, &base_path);
-        }
+        let mut uri = match self.config.base_path_behaviour {
+            BasePathBehaviour::Include | BasePathBehaviour::RemountAndInclude => req.full_path(),
+            BasePathBehaviour::Exclude => req.resource_path().to_owned(),
+        };
         let query = req.query_string_parameters();
 
         let mut separator = '?';
