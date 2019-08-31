@@ -1,0 +1,20 @@
+{
+    "$COMMENT": "A GET request to https://example.com/path/ though an Application Load Balancer",
+    "requestContext": {
+        "elb": {
+            "targetGroupArn": "arn:aws:elasticloadbalancing:eu-west-1:123456789123:targetgroup/example/0123456789abcdef"
+        }
+    },
+    "path": "/path/",
+    "httpMethod": "GET",
+    "headers": {
+        "Accept": "*/*",
+        "Host": "example.com",
+        "X-Forwarded-For": "1.2.3.4, 5.6.7.8",
+        "X-Forwarded-Port": "443",
+        "X-Forwarded-Proto": "https"
+    },
+    "queryStringParameters": {},
+    "body": "",
+    "isBase64Encoded": false
+}

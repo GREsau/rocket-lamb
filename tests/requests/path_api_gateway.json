@@ -1,12 +1,11 @@
 {
-    "$COMMENT": "A POST request to '/upper/one?query=two' with the body 'three'",
+    "$COMMENT": "A GET request to https://1234567890.execute-api.us-east-1.amazonaws.com/Prod/path/ (with the stage Prod)",
     "resource": "/{proxy+}",
-    "path": "/upper/one",
-    "httpMethod": "POST",
+    "path": "/path/",
+    "httpMethod": "GET",
     "headers": {
         "Accept": "*/*",
-        "content-type": "text/plain",
-        "Host": "example.com",
+        "Host": "1234567890.execute-api.us-east-1.amazonaws.com",
         "X-Forwarded-For": "1.2.3.4, 5.6.7.8",
         "X-Forwarded-Port": "443",
         "X-Forwarded-Proto": "https"
@@ -15,11 +14,8 @@
         "Accept": [
             "*/*"
         ],
-        "content-type": [
-            "text/plain"
-        ],
         "Host": [
-            "example.com"
+            "1234567890.execute-api.us-east-1.amazonaws.com"
         ],
         "X-Forwarded-For": [
             "1.2.3.4, 5.6.7.8"
@@ -31,28 +27,22 @@
             "https"
         ]
     },
-    "queryStringParameters": {
-        "query": "two"
-    },
-    "multiValueQueryStringParameters": {
-        "query": [
-            "two"
-        ]
-    },
+    "queryStringParameters": {},
+    "multiValueQueryStringParameters": {},
     "pathParameters": {
-        "proxy": "upper/one"
+        "proxy": "path"
     },
     "stageVariables": null,
     "requestContext": {
         "resourceId": "3htbry",
-        "resourcePath": "/upper/one",
-        "httpMethod": "POST",
+        "resourcePath": "/{proxy+}",
+        "httpMethod": "GET",
         "extendedRequestId": "a1b2c3d4e5f6g7h=",
         "requestTime": "20/Mar/2019:20:38:30 +0000",
-        "path": "/test/upper/one",
+        "path": "/Prod/path/",
         "accountId": "123456789012",
         "protocol": "HTTP/1.1",
-        "stage": "test",
+        "stage": "Prod",
         "domainPrefix": "r275xc9bmd",
         "requestTimeEpoch": 1553114310423,
         "requestId": "test-invoke-request",
@@ -69,9 +59,9 @@
             "userAgent": null,
             "user": null
         },
-        "domainName": "example.com",
+        "domainName": "1234567890.execute-api.us-east-1.amazonaws.com",
         "apiId": "r275xc9bmd"
     },
-    "body": "three",
+    "body": null,
     "isBase64Encoded": false
 }
