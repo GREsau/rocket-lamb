@@ -1,7 +1,6 @@
-use crate::config::{BasePathBehaviour, Config};
+use crate::config::*;
 use crate::error::RocketLambError;
 use crate::request_ext::RequestExt as _;
-use crate::ResponseType;
 use lambda_http::{Body, Handler, Request, RequestExt, Response};
 use lambda_runtime::{error::HandlerError, Context};
 use rocket::http::{uri::Uri, Header};

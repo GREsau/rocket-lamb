@@ -1,16 +1,7 @@
-use crate::config::{BasePathBehaviour, Config};
+use crate::config::*;
 use crate::handler::{LazyClient, RocketHandler};
 use lambda_http::lambda;
 use rocket::Rocket;
-
-/// Used to determine how to encode response content. The default is `Text`.
-#[derive(PartialEq, Copy, Clone, Debug)]
-pub enum ResponseType {
-    /// Send response content to API Gateway as a UTF-8 string.
-    Text,
-    /// Send response content to API Gateway Base64-encoded.
-    Binary,
-}
 
 /// A builder to create and configure a [RocketHandler](RocketHandler).
 pub struct RocketHandlerBuilder {
@@ -154,17 +145,24 @@ impl RocketHandlerBuilder {
         self
     }
 
-    /// TODO update documentation
+    /// Determines whether the API Gateway base path is included in the URL processed by Rocket.
+    /// The default is `RemountAndInclude`.
     ///
-    /// Sets whether or not the handler should determine the API Gateway base path and prepend it to the path of request URLs.
+    /// When calling the API using the default API Gateway URL e.g.
+    /// `{api-id}.execute-api.{region}.amazonaws.com/{stage}/`, the base path will be `/{stage}`.
+    /// When calling the API using an API Gateway custom domain, a base path may be configured
+    /// on the custom domain.
     ///
-    /// By default, this setting is `true`.
+    /// This has no effect for Application Load Balancer requests, as these will never have a base path.
     ///
-    /// When using the default API Gateway URL `1234567890.execute-api.region.amazonaws.com/{stage}/`, then the base path would
-    /// be `/{stage}`. If this setting is set to `true` (the default), then all mounted routes will be made available under
-    /// `/{stage}`, and all incoming requests to Rocket will have `/{stage}` at the beginning of the URL path. This is necessary
-    /// to make absolute URLs in responses (e.g. in the `Location` response header for redirects) function correctly when
-    /// hosting the server using the default API Gateway URL.
+    /// The possible values are:
+    /// - `RemountAndInclude` - Includes the base bath in the URL. The first request received will be used to determine
+    /// the base path, and all mounted routes will be cloned and re-mounted at the base path.
+    /// - `Include` - Includes the base bath in the URL. You must ensure that the `Rocket`'s routes have been
+    /// mounted at the expected base path.
+    /// - `Exclude` - Excludes the base bath from the URL. The URL processed by Rocket may not match the full
+    /// path of the original client, which may cause absolute URLs in responses (e.g. in the
+    /// `Location` response header for redirects) to not behave as expected.
     ///
     /// # Example
     ///

@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.5.0] - 2019-09-01
+### Breaking Changes:
+- The `include_api_gateway_base_path` method on `RockerHandlerBuilder` has been changed to `base_path_behaviour`. It should now detect the base path on API Gateway custom domains, as well as when using the default API Gateway URL.
+
 ## [0.4.0] - 2019-08-23
 ### Breaking Changes:
 - Renamed `RocketLamb` to `RockerHandlerBuilder`
