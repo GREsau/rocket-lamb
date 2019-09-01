@@ -85,13 +85,12 @@ test_case!(
     "/path/"
 );
 
-// FIXME
-// test_case!(
-//     custom_domain_with_base_path,
-//     "path_custom_domain_with_base",
-//     200,
-//     "/base-path/path/"
-// );
+test_case!(
+    custom_domain_with_base_path,
+    "path_custom_domain_with_base",
+    200,
+    "/base-path/path/"
+);
 test_case!(
     custom_domain_with_base_path_include,
     Include,
@@ -99,14 +98,13 @@ test_case!(
     404,
     "/base-path/path/"
 );
-// FIXME
-// test_case!(
-//     custom_domain_with_base_path_exclude,
-//     Exclude,
-//     "path_custom_domain_with_base",
-//     200,
-//     "/path/"
-// );
+test_case!(
+    custom_domain_with_base_path_exclude,
+    Exclude,
+    "path_custom_domain_with_base",
+    200,
+    "/path/"
+);
 
 test_case!(application_load_balancer, "path_alb", 200, "/path/");
 test_case!(

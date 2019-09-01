@@ -115,7 +115,7 @@ impl RocketHandler {
     fn get_path_and_query(&self, req: &Request) -> String {
         let mut uri = match self.config.base_path_behaviour {
             BasePathBehaviour::Include | BasePathBehaviour::RemountAndInclude => req.full_path(),
-            BasePathBehaviour::Exclude => req.resource_path().to_owned(),
+            BasePathBehaviour::Exclude => req.api_path().to_owned(),
         };
         let query = req.query_string_parameters();
 
