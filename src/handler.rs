@@ -100,11 +100,23 @@ impl RocketHandler {
             .copied()
             .unwrap_or(self.config.default_response_type);
         let body = match (local_res.body(), response_type) {
+            (Some(b), ResponseType::Auto) => {
+                let bytes = b
+                    .into_bytes()
+                    .ok_or_else(|| invalid_response!("failed to read response body"))?;
+                match String::from_utf8(bytes) {
+                    Ok(s) => Body::Text(s),
+                    Err(e) => Body::Binary(e.into_bytes()),
+                }
+            }
             (Some(b), ResponseType::Text) => Body::Text(
                 b.into_string()
-                    .ok_or_else(|| invalid_response!("response body was not text"))?,
+                    .ok_or_else(|| invalid_response!("failed to read response body as UTF-8"))?,
             ),
-            (Some(b), ResponseType::Binary) => Body::Binary(b.into_bytes().unwrap_or_default()),
+            (Some(b), ResponseType::Binary) => Body::Binary(
+                b.into_bytes()
+                    .ok_or_else(|| invalid_response!("failed to read response body"))?,
+            ),
             (None, _) => Body::Empty,
         };
 

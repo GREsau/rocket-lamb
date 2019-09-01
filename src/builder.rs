@@ -75,8 +75,8 @@ impl RocketHandlerBuilder {
     /// use rocket_lamb::{RocketExt, ResponseType};
     ///
     /// let builder = rocket::ignite().lambda();
-    /// assert_eq!(builder.get_default_response_type(), ResponseType::Text);
-    /// assert_eq!(builder.get_response_type("text/plain"), ResponseType::Text);
+    /// assert_eq!(builder.get_default_response_type(), ResponseType::Auto);
+    /// assert_eq!(builder.get_response_type("text/plain"), ResponseType::Auto);
     /// ```
     pub fn get_default_response_type(&self) -> ResponseType {
         self.config.default_response_type
@@ -111,9 +111,9 @@ impl RocketHandlerBuilder {
     ///
     /// let builder = rocket::ignite()
     ///     .lambda()
-    ///     .response_type("TEXT/PLAIN", ResponseType::Binary);
-    /// assert_eq!(builder.get_response_type("text/plain"), ResponseType::Binary);
-    /// assert_eq!(builder.get_response_type("application/json"), ResponseType::Text);
+    ///     .response_type("TEXT/PLAIN", ResponseType::Text);
+    /// assert_eq!(builder.get_response_type("text/plain"), ResponseType::Text);
+    /// assert_eq!(builder.get_response_type("application/json"), ResponseType::Auto);
     /// ```
     pub fn get_response_type(&self, content_type: &str) -> ResponseType {
         self.config
@@ -134,9 +134,9 @@ impl RocketHandlerBuilder {
     ///
     /// let builder = rocket::ignite()
     ///     .lambda()
-    ///     .response_type("TEXT/PLAIN", ResponseType::Binary);
-    /// assert_eq!(builder.get_response_type("text/plain"), ResponseType::Binary);
-    /// assert_eq!(builder.get_response_type("application/json"), ResponseType::Text);
+    ///     .response_type("TEXT/PLAIN", ResponseType::Text);
+    /// assert_eq!(builder.get_response_type("text/plain"), ResponseType::Text);
+    /// assert_eq!(builder.get_response_type("application/json"), ResponseType::Auto);
     /// ```
     pub fn response_type(mut self, content_type: &str, response_type: ResponseType) -> Self {
         self.config

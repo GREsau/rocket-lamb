@@ -22,9 +22,14 @@ fn upper(path: String, query: String, body: String) -> String {
     )
 }
 
+#[get("/binary")]
+fn binary() -> &'static [u8] {
+    &[200, 201, 202]
+}
+
 fn make_rocket() -> rocket::Rocket {
     rocket::ignite()
-        .mount("/", routes![upper])
+        .mount("/", routes![upper, binary])
         .register(catchers![not_found])
 }
 
@@ -34,7 +39,7 @@ fn get_request(json_file: &'static str) -> Result<Request, Box<dyn Error>> {
 }
 
 #[test]
-fn ok() -> Result<(), Box<dyn Error>> {
+fn ok_auto_text() -> Result<(), Box<dyn Error>> {
     let mut handler = make_rocket().lambda().into_handler();
 
     let req = get_request("upper")?;
@@ -47,7 +52,20 @@ fn ok() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
-fn ok_binary_default() -> Result<(), Box<dyn Error>> {
+fn ok_auto_binary() -> Result<(), Box<dyn Error>> {
+    let mut handler = make_rocket().lambda().into_handler();
+
+    let req = get_request("binary")?;
+    let res = handler.run(req, Context::default())?;
+
+    assert_eq!(res.status(), 200);
+    assert_header(&res, "content-type", "application/octet-stream");
+    assert_eq!(*res.body(), Body::Binary(vec![200, 201, 202]));
+    Ok(())
+}
+
+#[test]
+fn ok_default_binary() -> Result<(), Box<dyn Error>> {
     let mut handler = make_rocket()
         .lambda()
         .default_response_type(ResponseType::Binary)
@@ -66,7 +84,7 @@ fn ok_binary_default() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
-fn ok_binary() -> Result<(), Box<dyn Error>> {
+fn ok_type_binary() -> Result<(), Box<dyn Error>> {
     let mut handler = make_rocket()
         .lambda()
         .response_type("TEXT/PLAIN", ResponseType::Binary)

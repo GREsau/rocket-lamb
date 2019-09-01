@@ -6,12 +6,14 @@ pub(crate) struct Config {
     pub(crate) base_path_behaviour: BasePathBehaviour,
 }
 
-/// Determines how to encode response content. The default is `Text`.
+/// Determines how to encode response content. The default is `Auto`.
 #[derive(PartialEq, Copy, Clone, Debug)]
 pub enum ResponseType {
+    /// Attempts to encode response content as a UTF-8 string. If it is not valid UTF-8, it is instead encoded as base-64.
+    Auto,
     /// Encodes response content as a UTF-8 string.
     Text,
-    /// Encodes response content as Base64.
+    /// Encodes response content as base-64.
     Binary,
 }
 
@@ -34,7 +36,7 @@ pub enum BasePathBehaviour {
 impl Default for Config {
     fn default() -> Config {
         Config {
-            default_response_type: ResponseType::Text,
+            default_response_type: ResponseType::Auto,
             response_types: HashMap::new(),
             base_path_behaviour: BasePathBehaviour::RemountAndInclude,
         }
