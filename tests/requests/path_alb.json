@@ -1,5 +1,5 @@
 {
-    "$COMMENT": "A GET request to https://example.com/path/ though an Application Load Balancer",
+    "$COMMENT": "A GET request to https://example.com/path/ through an Application Load Balancer",
     "requestContext": {
         "elb": {
             "targetGroupArn": "arn:aws:elasticloadbalancing:eu-west-1:123456789123:targetgroup/example/0123456789abcdef"
