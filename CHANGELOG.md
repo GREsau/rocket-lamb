@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.6.0] - 2019-09-01
+### Added:
+- `ResponseType::Auto` added as the default. If a response body is not valid UTF-8 then it will automatically get base-64 encoded.
+
 ## [0.5.0] - 2019-09-01
 ### Breaking Changes:
 - The `include_api_gateway_base_path` method on `RockerHandlerBuilder` has been changed to `base_path_behaviour`. It should now detect the base path on API Gateway custom domains, as well as when using the default API Gateway URL.
